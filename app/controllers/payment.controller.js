@@ -18,7 +18,7 @@ const { AKURATECO_CLIENT_KEY, AKURATECO_PASSWORD, AKURATECO_PAYMENT_URL } =
 /**
  * handle payment create
  */
-// const createPayment = async (req, res, next) => {
+// export const createPayment = async (req, res, next) => {
 //   try {
 //     const {
 //       order_id,
@@ -72,7 +72,7 @@ const { AKURATECO_CLIENT_KEY, AKURATECO_PASSWORD, AKURATECO_PAYMENT_URL } =
 //   }
 // };
 
-const createPayment = async (req, res, next) => {
+export const createPayment = async (req, res, next) => {
   try {
     const {
       order_id,
@@ -197,7 +197,7 @@ const createPayment = async (req, res, next) => {
 /**
  * payment callback
  */
-const paymentCallback = async (req, res, next) => {
+export const paymentCallback = async (req, res, next) => {
   try {
     const params = req.body;
 
@@ -239,9 +239,4 @@ const paymentCallback = async (req, res, next) => {
 
     return res.status(500).send("ERROR");
   }
-};
-
-module.exports = {
-  createPayment,
-  paymentCallback,
 };

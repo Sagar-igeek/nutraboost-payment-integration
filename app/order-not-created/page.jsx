@@ -1,7 +1,6 @@
-import { useNavigate } from "react-router-dom";
+"use client";
 
 const OrderNotCreated = () => {
-  const navigate = useNavigate();
 
   const handleBackToShopify = () => {
     const returnUrl = localStorage.getItem("shopifyCartUrl");

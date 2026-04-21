@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useNavigate } from "react-router-dom";
+// import { useParams, useNavigate } from "react-router-dom";
 import Axios from "../../lib/Axios";
 import CartTimer from "./CartTimer";
 import QuantitySelector from "./QuantitySelector";
