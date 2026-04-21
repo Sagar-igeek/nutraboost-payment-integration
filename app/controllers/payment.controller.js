@@ -72,7 +72,7 @@ const { AKURATECO_CLIENT_KEY, AKURATECO_PASSWORD, AKURATECO_PAYMENT_URL } =
 //   }
 // };
 
-export const createPayment = async (req, res, next) => {
+export const createPayment = async (body) => {
   try {
     const {
       order_id,
@@ -96,7 +96,7 @@ export const createPayment = async (req, res, next) => {
       payer_zip,
       payer_country,
       payer_ip,
-    } = req.body;
+    } = body;
 
     // S2S Card hash: card_number + order_id + order_amount + order_currency + PASSWORD
     // (different from APM hash which uses identifier instead of card_number)
@@ -145,17 +145,17 @@ export const createPayment = async (req, res, next) => {
     switch (data.result) {
       case "SUCCESS":
         // Payment settled immediately (no 3DS required)
-        return res.json({
+        return {
           success: true,
           status: data.status,
           trans_id: data.trans_id,
           card_token: data.card_token || null, // returned if req_token = "Y"
           message: "Payment successful",
-        });
+        };
 
       case "REDIRECT":
         // 3DS verification required — send redirect info to frontend
-        return res.json({
+        return {
           success: false,
           requires_3ds: true,
           trans_id: data.trans_id,
@@ -163,43 +163,44 @@ export const createPayment = async (req, res, next) => {
           redirect_params: data.redirect_params || {},
           redirect_method: data.redirect_method || "POST",
           message: "3DS verification required",
-        });
+        };
 
       case "DECLINED":
-        return res.status(402).json({
+        return {
           success: false,
           status: "DECLINED",
           trans_id: data.trans_id,
           message: data.decline_reason || "Payment declined",
-        });
+        };
 
       case "ERROR":
-        return res.status(400).json({
+        return {
           success: false,
           status: "ERROR",
           message: data.error_message || "Payment error",
-        });
+        };
 
       default:
         // UNDEFINED / ACCEPTED — async, final status comes via webhook callback
-        return res.json({
+        return {
           success: false,
           status: data.status,
           trans_id: data.trans_id,
           message: "Payment is being processed, await confirmation",
-        });
+        };
     }
   } catch (err) {
-    next(err); // pass to your error middleware
+    console.error("createPayment Error:", err.message);
+    throw err;
   }
 };
 
 /**
  * payment callback
  */
-export const paymentCallback = async (req, res, next) => {
+export const paymentCallback = async (body) => {
   try {
-    const params = req.body;
+    const params = body;
 
     // Verify callback hash (see Akurateco Appendix A - Callback signature)
     const { hash: receivedHash, ...rest } = params;
@@ -217,7 +218,10 @@ export const paymentCallback = async (req, res, next) => {
 
     if (expectedHash !== receivedHash) {
       console.error("Invalid callback hash!");
-      return res.send("ERROR");
+      return {
+        success: false,
+        message: "Invalid callback hash",
+      };
     }
 
     const { order_id, trans_id, result, status } = params;
@@ -230,13 +234,12 @@ export const paymentCallback = async (req, res, next) => {
     // if (result === 'SUCCESS' && status === 'SETTLED') → mark order as paid
     // if (result === 'DECLINED') → mark order as failed
 
-    return res.send("OK");
+    return {
+      success: true,
+      message: "OK",
+    };
   } catch (error) {
     console.error("Payment callback error:", error);
-
-    // Optional: pass to Express error middleware
-    // return next(error);
-
-    return res.status(500).send("ERROR");
+    throw error;
   }
 };

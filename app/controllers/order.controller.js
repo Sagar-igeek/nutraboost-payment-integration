@@ -3,27 +3,23 @@ import shopifyService from "../lib/shopify"
 /**
  * Handles the creation of a draft order
  */
-export const createDraftOrder = async (req, res, next) => {
+export const createDraftOrder = async (body) => {
   try {
-    const { cartOrder, customer } = req.body;
+    const { cartOrder, customer } = body;
 
     if (!cartOrder) {
-      return res.status(400).json({
+      return {
         success: false,
         message: "Required data is missing",
-      });
+      };
     }
 
-    // Call the service function
     const draftOrder = await shopifyService.createDraftOrder(
       cartOrder,
       customer,
     );
 
-    console.log(draftOrder, "draftOrder");
-
-    // Return a clean response for the frontend
-    return res.status(201).json({
+    return {
       success: true,
       data: {
         id: draftOrder.id,
@@ -38,56 +34,56 @@ export const createDraftOrder = async (req, res, next) => {
           price: item.price,
         })),
       },
-    });
+    };
   } catch (error) {
     console.error("createDraftOrder Controller Error:", error.message);
-    next(error); // Pass to global error handler
+    throw error;
   }
 };
 
-export const completeOrder = async (req, res, next) => {
+export const completeOrder = async (body) => {
   try {
     const {
-      orderId, // draft order ID from URL params
-      customer, // shopify customer ID
-      paymentAmount, // from URL params
-      externalOrderId, // from Razorpay callback
-    } = req.body;
+      orderId,
+      customer,
+      paymentAmount,
+      externalOrderId,
+    } = body;
 
-    // ────────── Validation ──────────
+    // Validation
     if (!orderId) {
-      return res.status(400).json({
+      return {
         success: false,
         message: "Order ID is required",
-      });
+      };
     }
 
     if (!paymentAmount) {
-      return res.status(400).json({
+      return {
         success: false,
         message: "Payment amount is required",
-      });
+      };
     }
 
-    // ── Step 1: Complete Draft Order → converts to real order ───
+    // Step 1: Complete Draft Order
     console.log(`Completing draft order: ${orderId}`);
     const completedOrder = await shopifyService.completeDraftOrder(orderId);
 
     const shopifyOrderId = completedOrder.order_id;
 
-    // ── Step 2: Mark as Paid (external payment transaction) ─────
+    // Step 2: Mark as Paid
     console.log(
       `Marking order ${shopifyOrderId} as paid for customer ${customer}`,
     );
+
     // await shopifyService.markOrderAsPaid(
     //   shopifyOrderId,
     //   paymentAmount,
     //   externalOrderId,
-    //   customer, // ← passing customer ID
+    //   customer,
     // );
 
-    // ── Response ────────────────────────────────────────────────
-    return res.status(201).json({
+    return {
       success: true,
       data: {
         draftOrderId: orderId,
@@ -98,10 +94,10 @@ export const completeOrder = async (req, res, next) => {
         customerId: customer,
         financialStatus: "paid",
       },
-    });
+    };
   } catch (error) {
     console.error("completeOrder Controller Error:", error.message);
-    next(error);
+    throw error;
   }
 };
 
@@ -112,28 +108,23 @@ export const getOrderDetails = async (req) => {
 
     // Validation
     if (!orderId) {
-      throw new Error("Order ID is required");
+      return {
+        success: false,
+        message: "Order ID is required",
+      };
     }
 
     // Get Order Details
     console.log(`getting details of ${orderId}`);
     const orderData = await shopifyService.getOrderDetail(orderId);
     console.log("orderData", orderData);
-    
 
-    // Return response object
     return {
       success: true,
       data: orderData,
     };
   } catch (error) {
-    console.error("getOrderDetails Controller Error:", error);
+    console.error("getOrderDetails Controller Error:", error.message);
     throw error;
   }
 };
-
-// export default {
-//   createDraftOrder,
-//   completeOrder,
-//   getOrderDetails,
-// };
